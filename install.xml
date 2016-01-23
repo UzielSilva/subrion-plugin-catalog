@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin name="catalog">
+	<title>Catalog</title>
+	<summary>Allows to create a catalog section</summary>
+	<author>Uziel Silva</author>
+	<contributor>Uziel Silva</contributor>
+	<version>4.0.0</version>
+	<date>2016-01-23</date>
+	<compatibility>4.0</compatibility>
+
+	<actions>
+		<action name="catalog" url="catalog/" icon="list" pages="catalog:add,catalog:edit">List</action>
+		<action name="catalog_add" url="catalog/add/" icon="plus" pages="catalog:read,catalog:edit">Add catalog entry</action>
+		<action type="dashboard" name="dashboard_catalog_add" url="catalog/add/" icon="plus">New catalog entry</action>
+	</actions>
+
+	<adminpages>
+		<page group="content" name="catalog" order="60" url="catalog/" menus="menu">Catalog</page>
+	</adminpages>
+
+	<pages>
+		<page menus="main" name="catalog" url="catalog/">Catalog</page>
+	</pages>
+
+	<phrases>
+		<phrase category="admin" key="pf_entries">Catalog</phrase>
+		<phrase category="admin" key="pf_add">Add catalog entry</phrase>
+		<phrase category="admin" key="pf_edit">Edit catalog entry</phrase>
+		<phrase category="admin" key="pf_body">Description of your product</phrase>
+		<phrase category="admin" key="pf_tags">Tags</phrase>
+		<phrase category="admin" key="pf_tags_help">Separate tags with comma</phrase>
+		<phrase category="admin" key="pf_image">Image</phrase>
+		<phrase category="admin" key="pf_added">Your product was added!</phrase>
+		<phrase category="admin" key="pf_deleted">Your product was removed! =(</phrase>
+
+		<phrase category="frontend" key="pf_view_all">View all</phrase>
+		<phrase category="frontend" key="pf_no_entries">Nothing to show right now. Content coming soon!</phrase>
+	</phrases>
+
+	<configgroup name="catalog">Catalog</configgroup>
+
+	<config group="catalog" name="catalog_page" type="divider">Catalog page</config>
+	<config group="catalog" name="catalog_entries_per_page" type="text" description="Number of displayed products per page">20</config>
+	<config group="catalog" name="catalog_desc_length" type="text" description="Number of chars in description">100</config>
+	<config group="catalog" name="catalog_entries_order" type="select" values="alphabetic,date" description="Entries order by">date</config>
+
+	<config group="catalog" name="catalog_block" type="divider">New Catalog products block</config>
+	<config group="catalog" name="catalog_block_count" type="text" description="Number of displayed products">4</config>
+
+	<config group="catalog" name="catalog_images" type="divider">Images</config>
+	<config group="catalog" name="catalog_use_crop" type="radio" values="1,0" description="Use cropper for thumbnails">1</config>
+	<config group="catalog" name="catalog_image_width" type="text" description="Resized image width">800</config>
+	<config group="catalog" name="catalog_image_height" type="text" description="Resized image height">600</config>
+	<config group="catalog" name="catalog_thumbnail_width" type="text" description="Thumbnail width" private="0">300</config>
+	<config group="catalog" name="catalog_thumbnail_height" type="text" description="Thumbnail height" private="0">300</config>
+
+	<blocks>
+		<block title="New Catalog products" name="new_catalog_products" position="verybottom" type="smarty" sticky="0" pages="index" classname="pf" order="5" filename="block.new-catalog-products"><![CDATA[]]></block>
+	</blocks>
+
+	<hooks>
+		<hook name="phpCoreBeforePageDisplay" page_type="front">
+			<![CDATA[
+if (iaView::REQUEST_HTML == $iaView->getRequestType() && $iaView->blockExists('new_catalog_products'))
+{
+	$stmt = '`status` = :status AND `lang` = :language ORDER BY `date_added` DESC';
+	$iaDb->bind($stmt, array('status' => iaCore::STATUS_ACTIVE, 'language' => $iaView->language));
+
+	$products = $iaDb->all(array('id', 'productname', 'date_added', 'description', 'short_description', 'image', 'price'), $stmt, 0, $iaCore->get('catalog_block_count'), 'catalog_products');
+	$iaView->assign('block_catalog_products', $products);
+}
+			]]>
+		</hook>
+		<hook name="adminDashboardStatistics" page_type="admin" pages="index"><![CDATA[$items['catalog:catalogs'] = 'plugin';]]></hook>
+		<hook name="sitemapGeneration" page_type="admin" pages="index"><![CDATA[$items[] = 'catalog:catalog';]]></hook>
+	</hooks>
+
+	<install>
+		<sql>
+			<![CDATA[
+CREATE TABLE IF NOT EXISTS `{prefix}catalog_products` (
+	`id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+	`productname` varchar(50) NOT NULL,
+	`date_added` date NOT NULL,
+	`status` enum('active','inactive') NOT NULL,
+	`description` varchar(250) NOT NULL,
+	`short_description` varchar(30) NOT NULL,
+	`image` tinytext NOT NULL,
+	`price` decimal(12,2) unsigned NOT NULL,
+	`views_num` mediumint(8) unsigned NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `PRODUCTNAME` (`productname`)
+) {mysql_version};
+			]]>
+		</sql>
+	</install>
+
+	<uninstall>
+		<sql>
+			<![CDATA[
+DROP TABLE IF EXISTS `{prefix}catalog_products`;
+			]]>
+		</sql>
+	</uninstall>
+</plugin>
